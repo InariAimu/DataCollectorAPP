@@ -80,6 +80,8 @@ public class MainActivity extends AppCompatActivity
         myHandler = new MyHandler();
 
         //获取权限
+        //位置（wifi信息）
+        //存储（写记录文件）
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
         {
             // Android M Permission check
