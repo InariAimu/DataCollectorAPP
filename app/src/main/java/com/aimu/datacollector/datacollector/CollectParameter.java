@@ -13,7 +13,7 @@ public class CollectParameter
     /**
      * 数据采集的时间长度（秒）
      */
-    public int duration = 1;
+    public int duration = 5;
 
     /**
      * 楼层编号
@@ -21,7 +21,7 @@ public class CollectParameter
     public int floor;
 
     /**
-     * 地图坐标
+     * 地图（图片）坐标
      */
     public PointF mapLocation;
 
@@ -67,7 +67,12 @@ public class CollectParameter
     public int magSensorDelay = SensorManager.SENSOR_DELAY_FASTEST;
 
     /**
-     * WiFi数据采集的时间间隔（毫秒）
+     * WiFi数据采集的最大次数（每次采集最多采集几次WiFi数据）
      */
-    public int wifiDelay = 200;
+    public int wifiMaxCount = 5;
+    /**
+     * WiFi数据采集的时间间隔（毫秒）
+     * 由于安卓系统的一些问题，每次扫描可能要1.5秒以上才会完成，此处建议时间间隔不少于1500ms
+     */
+    public int wifiDelay = 1500;
 }

@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity
             "1",
             "2"
     };
+    private int currFloor;
     /**
      * 楼层的图片ID
      */
@@ -86,11 +87,13 @@ public class MainActivity extends AppCompatActivity
         {
             // Android M Permission check
             if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+                    this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
                     this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
             {
                 requestPermissions(
                         new String[]{
                                 Manifest.permission.ACCESS_COARSE_LOCATION,
+                                Manifest.permission.ACCESS_FINE_LOCATION,
                                 Manifest.permission.WRITE_EXTERNAL_STORAGE},
                         PERMISSION_REQUEST_COARSE_LOCATION);
             }
@@ -114,6 +117,7 @@ public class MainActivity extends AppCompatActivity
                 arg0.setVisibility(View.VISIBLE);
                 //scalableMapView.setImageBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.floor_1));
                 int selectedIndex = arg2;
+                currFloor = selectedIndex;
                 scalableMapView.setImageBitmapById(floorImage[selectedIndex]);
             }
 
@@ -216,8 +220,8 @@ public class MainActivity extends AppCompatActivity
         }
 
         CollectParameter cp = new CollectParameter();
-        cp.floor = 1;
-        cp.mapLocation = new PointF(0, 0);
+        cp.floor = currFloor + 1;
+        cp.mapLocation = scalableMapView.pressPoint;
         SensorHandlerService.instance().Start(cp);
 
         Timer timer = new Timer();

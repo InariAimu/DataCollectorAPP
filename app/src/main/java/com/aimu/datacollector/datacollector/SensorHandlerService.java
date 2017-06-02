@@ -1,15 +1,23 @@
 package com.aimu.datacollector.datacollector;
 
+import android.Manifest;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.os.SystemClock;
@@ -39,6 +47,8 @@ public class SensorHandlerService extends Service implements SensorEventListener
 
     private WifiManager wifiManager = null;
     private boolean isWifiScanning = false;
+    private int wifiCount;
+    private int wifiMaxCount;
     private ArrayList<WiFiDataList> wiFiDataList = null;
     private Timer wifiTimer;
 
@@ -56,6 +66,7 @@ public class SensorHandlerService extends Service implements SensorEventListener
 
     /**
      * 用收集参数cp开始进行数据收集
+     *
      * @param cp 收集参数
      */
     public void Start(CollectParameter cp)
@@ -68,19 +79,70 @@ public class SensorHandlerService extends Service implements SensorEventListener
         this.dataWrapper.floor = cp.floor;
         this.dataWrapper.mapPoint = cp.mapLocation;
 
+        //拿GPS位置
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        {
+            // Android M Permission check
+            if (this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+            {
+
+                LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+                // 查找到服务信息
+                Criteria criteria = new Criteria();
+                criteria.setAccuracy(Criteria.ACCURACY_FINE); // 高精度
+                criteria.setAltitudeRequired(true);
+                criteria.setBearingRequired(false);
+                criteria.setCostAllowed(true);
+                criteria.setPowerRequirement(Criteria.POWER_LOW); // 低功耗
+
+                String provider = locationManager.getBestProvider(criteria, true); // 获取GPS信息
+
+                if (provider.equals("gps") && locationManager.isProviderEnabled(provider))
+                {
+                    Location location = locationManager.getLastKnownLocation(provider); // 通过GPS获取位置
+
+                    if (location != null)
+                    {
+                        this.dataWrapper.gpsValidate = true;
+                        this.dataWrapper.gpsLatitude = location.getLatitude();
+                        this.dataWrapper.gpsLongitude = location.getLongitude();
+                        this.dataWrapper.gpsAltitude = location.getAltitude();
+                    }
+                    else
+                    {
+                        this.dataWrapper.gpsValidate = false;
+                    }
+                }
+                else
+                {
+                    this.dataWrapper.gpsValidate = false;
+                }
+            }
+            else
+            {
+                Toast.makeText(MainActivity.instance, "GPS无权限", Toast.LENGTH_LONG).show();
+                this.dataWrapper.gpsValidate = false;
+            }
+        }
+
         //开启wifi定时扫描
         wifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
         wifiTimer = new Timer();
-        wifiTimer.scheduleAtFixedRate(new TimerTask()
+        wifiCount = 0;
+        wifiMaxCount = cp.wifiMaxCount;
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+        registerReceiver(new BroadcastReceiver()
         {
             @Override
-            public void run()
+            public void onReceive(Context context, Intent intent)
             {
-                //加一个同步机制
-                if (isWifiScanning == false)
+                final String action = intent.getAction();
+                // wifi已成功扫描到可用wifi。
+                if (action.equals(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION))
                 {
-                    isWifiScanning = true;
-                    //wifiManager.startScan();
                     List<ScanResult> lsr = wifiManager.getScanResults();
                     if (lsr == null)
                     {
@@ -97,11 +159,29 @@ public class SensorHandlerService extends Service implements SensorEventListener
                         }
                         wiFiDataList.add(wdl);
                     }
+                }
+            }
+        }, filter);
+
+        wifiTimer.scheduleAtFixedRate(new TimerTask()
+        {
+            @Override
+            public void run()
+            {
+                //加一个同步机制
+                if (isWifiScanning == false && wifiCount < wifiMaxCount)
+                {
+                    isWifiScanning = true;
+                    wifiManager.startScan();
+
+                    wifiCount++;
                     isWifiScanning = false;
                 }
             }
-        //每隔wifiDelay毫秒，进行一次扫描
+            //每隔wifiDelay毫秒，进行一次扫描
         }, 0, collectParameter.wifiDelay);
+
+        //context.registerReceiver(this.wifiReceiver, new IntentFilter(WifiManager.SCANRESULTSAVAILABLE_ACTION))
 
         //开启传感器数据收集
         manager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);

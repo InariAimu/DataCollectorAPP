@@ -50,6 +50,23 @@ public class DataWrapper
     public ArrayList<TimeVector3> magArray;
 
     /**
+     *
+     */
+    public boolean gpsValidate=false;
+    /**
+     *
+     */
+    public double gpsLatitude=-1;
+    /**
+     *
+     */
+    public double gpsLongitude=-1;
+    /**
+     *
+     */
+    public double gpsAltitude=-1;
+
+    /**
      * 构造函数
      */
     public DataWrapper()
@@ -74,6 +91,11 @@ public class DataWrapper
             jo.put("map_x", mapPoint.x);
             jo.put("map_y", mapPoint.y);
             jo.put("floor_index", floor);
+
+            jo.put("gps_validate",gpsValidate?"true":"false");
+            jo.put("gps_latitude",gpsLatitude);
+            jo.put("gps_longitude",gpsLongitude);
+            jo.put("gps_altitude",gpsAltitude);
 
             scanNum = wifiArray.size();
             jo.put("scan_num", scanNum);
